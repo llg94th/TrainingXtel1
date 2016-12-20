@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">TrainingXtel1</string>
+    <string name="xtel_slogan">Tìm bãi đỗ xe gần bạn nhất</string>
+    <string name="xtel_login_by_phone">Đăng nhập bằng số điện thoại</string>
+    <string name="xtel_or">----------hoặc----------</string>
+    <string name="login_with_facebook">Đăng nhập bằng Facebook</string>
+</resources>
