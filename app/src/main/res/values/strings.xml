@@ -4,4 +4,8 @@
     <string name="xtel_login_by_phone">Đăng nhập bằng số điện thoại</string>
     <string name="xtel_or">----------hoặc----------</string>
     <string name="login_with_facebook">Đăng nhập bằng Facebook</string>
+    <string name="enter_your_phone_number">Nhập số điện thoại của bạn</string>
+    <string name="FACEBOOK_APP_ID">1623661414599437</string>
+    <string name="ACCOUNT_KIT_CLIENT_TOKEN">48e3188e71531cff2966c8fdf0f5ed91</string>
+    <string name="login_vparking">Đăng nhập vào vParking</string>
 </resources>
