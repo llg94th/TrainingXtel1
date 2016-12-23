@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "com.llg94th.trainingxtel1"
-        minSdkVersion 21
+        minSdkVersion 16
         targetSdkVersion 25
         versionCode 1
         versionName "1.0"
@@ -25,5 +25,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:25.0.1'
     compile 'com.facebook.android:account-kit-sdk:4.+'
+    compile 'com.facebook.android:facebook-android-sdk:4.+'
     compile 'com.google.code.gson:gson:2.8.0'
+    compile 'com.koushikdutta.ion:ion:2.1.9'
 }

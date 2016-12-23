@@ -6,6 +6,8 @@
             <solid android:color="#3F51B5"/>
         </shape>
     </item>
-    <item android:drawable="@drawable/fb_icon" android:left="0dp" android:width="48dp" android:height="48dp"/>
+    <item>
+        <bitmap android:src="@drawable/ic_fb_icon" android:gravity="left"/>
+    </item>
 
 </layer-list>
