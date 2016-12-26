@@ -1,23 +1,17 @@
 package com.llg94th.trainingxtel1.views;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.Signature;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.util.Base64;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
-import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
@@ -29,24 +23,18 @@ import com.facebook.accountkit.ui.AccountKitConfiguration;
 import com.facebook.accountkit.ui.LoginType;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
-import com.google.gson.JsonObject;
-import com.koushikdutta.async.future.FutureCallback;
-import com.koushikdutta.ion.Ion;
 import com.llg94th.trainingxtel1.R;
 import com.llg94th.trainingxtel1.models.AccountKitResult;
+import com.llg94th.trainingxtel1.presenters.MainPresenter;
+import com.llg94th.trainingxtel1.views.inf.BasicActivityInterface;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Collections;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends MyBasicActivity implements View.OnClickListener, BasicActivityInterface {
 
-    public static final String MY_TAG = "MY_TAG";
-
-    private Button btnLoginByPhone, btnLoginWithFB;
-    private com.facebook.accountkit.AccessToken accessToken;
     private AccountKitResult accountKitResult;
-    private AccountKitLoginResult loginResult;
+    private MainPresenter presenter;
     private CallbackManager callbackManager;
     public static final int APP_REQUEST_CODE = 99;
 
@@ -59,42 +47,27 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void innit() {
-        checkPermission(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_SMS});
-        btnLoginByPhone = (Button) findViewById(R.id.btnLoginByPhone);
-        btnLoginWithFB = (Button) findViewById(R.id.btnLoginWithFB);
-//Gen hashkey
-//        try {
-//            PackageInfo info = getPackageManager().getPackageInfo(
-//                    "com.llg94th.trainingxtel1",
-//                    PackageManager.GET_SIGNATURES);
-//            for (Signature signature : info.signatures) {
-//                MessageDigest md = MessageDigest.getInstance("SHA");
-//                md.update(signature.toByteArray());
-//                Log.e("KeyHash:", Base64.encodeToString(md.digest(), Base64.DEFAULT));
-//            }
-//        } catch (PackageManager.NameNotFoundException e) {
-//            e.printStackTrace();
-//        } catch (NoSuchAlgorithmException e) {
-//            e.printStackTrace();
-//        }
+        checkPermission(new String[]{
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_SMS
+        });
+        presenter = new MainPresenter(this);
+        findViewById(R.id.btnLoginByPhone).setOnClickListener(this);
+        findViewById(R.id.btnLoginWithFB).setOnClickListener(this);
         //LOGIN BY PHONE
         AccountKit.initialize(getApplicationContext());
         if (AccountKit.isInitialized()) {
-            accessToken = AccountKit.getCurrentAccessToken();
+            com.facebook.accountkit.AccessToken accessToken = AccountKit.getCurrentAccessToken();
             if (accessToken != null) {
-                Log.d(MY_TAG, accessToken.toString());
-            } else {
-                //Handle new or logged out user
+                log(accessToken.toString());
             }
         }
-        btnLoginByPhone.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                onLoginPhone(view);
-            }
-        });
-
         //LOGIN WITH FACEBOOK
+
+        innitFacebookSDK();
+    }
+
+    private void innitFacebookSDK() {
         FacebookSdk.sdkInitialize(this.getApplicationContext());
         callbackManager = CallbackManager.Factory.create();
         LoginManager.getInstance().registerCallback(callbackManager,
@@ -104,25 +77,19 @@ public class LoginActivity extends AppCompatActivity {
                         Log.d("Success", "Login");
                         accountKitResult = AccountKitResult.getInstant(getApplicationContext());
                         accountKitResult.setAccess_token_key(loginResult.getAccessToken().getToken());
-                        sendRequesToSever(accountKitResult,false);
+                        presenter.sendAccountResultToSever(accountKitResult, false);
                     }
 
                     @Override
                     public void onCancel() {
-                        Toast.makeText(LoginActivity.this, "Login Cancel", Toast.LENGTH_LONG).show();
+                        showToast("Login Cancel");
                     }
 
                     @Override
                     public void onError(FacebookException exception) {
-                        Toast.makeText(LoginActivity.this, exception.getMessage(), Toast.LENGTH_LONG).show();
+                        showToast(exception.getMessage());
                     }
                 });
-        btnLoginWithFB.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                LoginManager.getInstance().logInWithReadPermissions(LoginActivity.this, Arrays.asList("email"));
-            }
-        });
     }
 
     public void onLoginPhone(final View view) {
@@ -130,8 +97,7 @@ public class LoginActivity extends AppCompatActivity {
         AccountKitConfiguration.AccountKitConfigurationBuilder configurationBuilder =
                 new AccountKitConfiguration.AccountKitConfigurationBuilder(
                         LoginType.PHONE,
-                        AccountKitActivity.ResponseType.CODE); // or .ResponseType.TOKEN
-        // ... perform additional configuration ...
+                        AccountKitActivity.ResponseType.CODE);
         configurationBuilder.setDefaultCountryCode("+84");
         intent.putExtra(
                 AccountKitActivity.ACCOUNT_KIT_ACTIVITY_CONFIGURATION,
@@ -147,11 +113,10 @@ public class LoginActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         callbackManager.onActivityResult(requestCode, resultCode, data);
         if (requestCode == APP_REQUEST_CODE) { // confirm that this response matches your request
-            loginResult = data.getParcelableExtra(AccountKitLoginResult.RESULT_KEY);
+            AccountKitLoginResult loginResult = data.getParcelableExtra(AccountKitLoginResult.RESULT_KEY);
             String toastMessage;
             if (loginResult.getError() != null) {
                 toastMessage = loginResult.getError().getErrorType().getMessage();
-                //showErrorActivity(loginResult.getError());
             } else if (loginResult.wasCancelled()) {
                 toastMessage = "Login Cancelled";
             } else {
@@ -159,21 +124,17 @@ public class LoginActivity extends AppCompatActivity {
                     toastMessage = loginResult.getAuthorizationCode();
                     accountKitResult = AccountKitResult.getInstant(getApplicationContext());
                     accountKitResult.setAuthorization_code(loginResult.getAuthorizationCode());
-                    sendRequesToSever(accountKitResult,true);
+                    presenter.sendAccountResultToSever(accountKitResult, true);
                 } else {
                     toastMessage = "";
                 }
             }
-            Toast.makeText(
-                    this,
-                    toastMessage,
-                    Toast.LENGTH_LONG)
-                    .show();
+            showToast(toastMessage);
         }
     }
 
     private void checkPermission(String[] list) {
-        Log.d(MY_TAG, "checkPermission: list.length=" + list.length);
+        log("checkPermission: list.length=" + list.length);
         if (ContextCompat.checkSelfPermission(this, list[0]) != PackageManager.PERMISSION_GRANTED
                 || ContextCompat.checkSelfPermission(this, list[1]) != PackageManager.PERMISSION_GRANTED
                 || ContextCompat.checkSelfPermission(this, list[2]) != PackageManager.PERMISSION_GRANTED) {
@@ -187,7 +148,7 @@ public class LoginActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 6969) {
             for (int i = 0; i < grantResults.length; i++) {
-                Log.d(MY_TAG, permissions[i] + ":" + grantResults[i]);
+                log(permissions[i] + ":" + grantResults[i]);
                 if (ContextCompat.checkSelfPermission(this, permissions[0]) != PackageManager.PERMISSION_GRANTED
                         || ContextCompat.checkSelfPermission(this, permissions[1]) != PackageManager.PERMISSION_GRANTED
                         || ContextCompat.checkSelfPermission(this, permissions[2]) != PackageManager.PERMISSION_GRANTED) {
@@ -197,28 +158,28 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    private void sendRequesToSever(AccountKitResult account,boolean isByPhone){
-        Log.d(MY_TAG,account.toJsonString());
-        String link;
-        if(isByPhone){
-            link = "http://124.158.5.112:9180/nipum/v1.0/m/user/accountkit/login";
-        }else {
-            link = "http://124.158.5.112:9180/nipum/v1.0/m/user/fb/login";
-        }
-        Ion.with(getApplicationContext())
-                .load(link)
-                .setJsonObjectBody(account.toJsonObject())
-                .asJsonObject()
-                .setCallback(new FutureCallback<JsonObject>() {
-                    @Override
-                    public void onCompleted(Exception e, JsonObject result) {
 
-                        if (result!=null){
-                            Toast.makeText(LoginActivity.this, result.toString(), Toast.LENGTH_SHORT).show();
-                        }else {
-                            Toast.makeText(LoginActivity.this, e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.btnLoginByPhone:
+                onLoginPhone(v);
+                break;
+            case R.id.btnLoginWithFB:
+                LoginManager.getInstance().logInWithReadPermissions(LoginActivity.this, Collections.singletonList("email"));
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    public void showToast(String mesages) {
+        Toast.makeText(this, mesages, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public Activity getActivity() {
+        return this;
     }
 }
